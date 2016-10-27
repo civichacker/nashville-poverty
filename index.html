@@ -49,6 +49,9 @@ var raceData,
   raceMap,
   povertyMap;
 
+var markerData,
+  markerGeoJSON;
+
 var hues = [
   '#f7fbff',
   '#deebf7',
@@ -84,7 +87,42 @@ var color = d3.scale.linear()
       .range(['#fff', '#99000d']);
 
 
-d3.csv("data/ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, data){
+
+d3.csv("GeocodeResults.csv", function(error, data){
+  markerData = data;
+
+  markerGeoJSON = {
+    "type": "FeatureCollection",
+    "features": [
+    ]
+  };
+
+  for (var i = 0; i < markerData.length; i++) {
+    console.log(markerData[i]);
+    if (markerData[i]["LL"] != undefined) {
+    markerGeoJSON["features"].push(
+    {
+      "type": "Feature",
+      geometry: {
+        type: 'Point',
+        coordinates: markerData[i]["LL"].split(",")
+      },
+      properties: {
+        title: markerData[i]["Name"],
+        description: '1718 14th St NW, Washington, DC',
+        'marker-size': 'large',
+        'marker-color': '#BE9A6B',
+        'marker-symbol': 'cafe'
+      }
+    });
+    }
+    
+  }
+
+});
+
+
+d3.csv("ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, data){
   povertyData = data;
 
    povertyDataClean = {};
@@ -104,7 +142,7 @@ d3.csv("data/ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, da
 
 
 });
-d3.csv("data/all_140_in_47.P3.csv", function(error, data){
+d3.csv("all_140_in_47.P3.csv", function(error, data){
   raceData = data;
 /*
   raceMap = d3.map(raceData, function(d){
@@ -145,7 +183,13 @@ var map = L.mapbox.map('map', 'mapbox.light')
     .setView([36.2, -87], 12);
 
 
-var geocoderControl = L.mapbox.geocoderControl('mapbox.places');
+var geocoderControl = L.mapbox.geocoderControl(
+  'mapbox.places',
+  {
+    keepOpen: true,
+    autocomplete: true
+  }
+);
 geocoderControl.addTo(map);
 
 geocoderControl.on('select', function(res) {
@@ -165,7 +209,7 @@ var map = new mapboxgl.Map({
 });
 */
 var davidsonLayer = L.mapbox.featureLayer()
-    .loadURL('data/tn-davidson-tracts.geojson')
+    .loadURL('tn-davidson-tracts.geojson')
         .addTo(map)
             .on('ready', function() {
 
@@ -247,10 +291,44 @@ davidsonLayer.on('mouseover', function(e) {
 davidsonLayer.on('mouseout', function(e) {
       e.layer.closePopup();
       });
+/*
+L.mapbox.featureLayer({
+    // this feature is in the GeoJSON format: see geojson.org
+    // for the full specification
+type: 'Feature',
+geometry: {
+type: 'Point',
+// coordinates here are in longitude, latitude order because
+// x, y is the standard for GeoJSON and many formats
+coordinates: [
+  -86.77015,
+  36.154194
+]
+},
+properties: {
+title: 'Peregrine Espresso',
+description: '1718 14th St NW, Washington, DC',
+// one can customize markers by adding simplestyle properties
+// https://www.mapbox.com/guides/an-open-platform/#simplestyle
+'marker-size': 'large',
+'marker-color': '#BE9A6B',
+'marker-symbol': 'cafe'
+            }
+}).addTo(map);
+*/
+
+var myLayer = L.mapbox.featureLayer().addTo(map);
+
+for (i in markerGeoJSON['features']) {
+    console.log(markerGeoJSON['features'][i]);
+}
+
+console.log(markerGeoJSON);
+myLayer.setGeoJSON(markerGeoJSON);
 
 
 setVariable(variables[0]);
-setRace(variables[0]);
+//setRace(variables[0]);
 
 function fillFn(p){
   return color(p);
