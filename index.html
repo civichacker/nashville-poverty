@@ -88,7 +88,7 @@ var color = d3.scale.linear()
 
 
 
-d3.csv("GeocodeResults.csv", function(error, data){
+d3.csv("data/GeocodeResults.csv", function(error, data){
   markerData = data;
 
   markerGeoJSON = {
@@ -122,7 +122,7 @@ d3.csv("GeocodeResults.csv", function(error, data){
 });
 
 
-d3.csv("ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, data){
+d3.csv("data/ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, data){
   povertyData = data;
 
    povertyDataClean = {};
@@ -142,7 +142,7 @@ d3.csv("ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, data){
 
 
 });
-d3.csv("all_140_in_47.P3.csv", function(error, data){
+d3.csv("data/all_140_in_47.P3.csv", function(error, data){
   raceData = data;
 /*
   raceMap = d3.map(raceData, function(d){
@@ -451,7 +451,7 @@ d3.csv("ACS_10_5YR_DP04_simplied_poverty_clean.csv", function(error, data){
 });
 
 
-d3.json('tn-davidson-tracts.geojson', function(error, mapData) {
+d3.json('data/tn-davidson-tracts.geojson', function(error, mapData) {
   var features = mapData.features;
 
   raceMap = d3.map(raceData, function(d){
