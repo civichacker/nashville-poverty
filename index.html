@@ -1,1 +1,456 @@
-<h1>Hello!</h1>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<!--script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.26.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.26.0/mapbox-gl.css' rel='stylesheet' /-->
+
+
+<script src='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.js'></script>
+<link href='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.css' rel='stylesheet' />
+<style>
+body { margin:0; padding:0; }
+#map { position:absolute; top:0; bottom:0; width:100%; }
+
+
+.background {
+fill: #eee;
+      pointer-events: all;
+}
+
+.map-layer {
+fill: #fff;
+stroke: #aaa;
+}
+
+.map-container {
+  width: 50%;
+  height: 100%;
+  float: left;
+}
+
+</style>
+
+</head>
+<body>
+<div class="map-container">
+  <svg id="l1" class="this"></svg>
+</div>
+<div class="map-container">
+  <svg id="l2" class="this"></svg>
+</div>
+<div id="map"></div>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script>
+var raceData,
+  povertyData,
+  povertyDataClean,
+  raceMap,
+  povertyMap;
+
+var hues = [
+  '#f7fbff',
+  '#deebf7',
+  '#c6dbef',
+  '#9ecae1',
+  '#6baed6',
+  '#4292c6',
+  '#2171b5',
+  '#08519c',
+  '#08306b'];
+
+var ranges = {};
+
+
+var povertyColumns = [
+  "M:30.0 to 34.9 percent",
+  "M:35.0 percent or more",
+  "R:30.0 to 34.9 percent",
+  "R:35.0 percent or more"
+];
+
+
+var variables = [
+  'B06011004 - Native; born outside the United States'];
+
+for (var i = 0; i < variables.length; i++) {
+  ranges[variables[i]] = { min: Infinity, max: -Infinity };
+}
+
+var color = d3.scale.linear()
+  .domain([0.0, 1.0])
+    .clamp(true)
+      .range(['#fff', '#99000d']);
+
+
+d3.csv("data/ACS_10_5YR_DP04_simplied_poverty_clean_new.csv", function(error, data){
+  povertyData = data;
+
+   povertyDataClean = {};
+  for (var i = 0; i < povertyData.length; i++) {
+      if (povertyData[i].Calculation == "Estimate") {
+        povertyDataClean[povertyData[i].Tract] = povertyData[i];
+      }
+  }
+/*
+  povertyMap = d3.map(povertyData, function(d){
+      if (d.Calculation == "Estimate") {
+        return d.Tract;
+      }
+  });
+  */
+  //console.log(povertyDataClean);
+
+
+});
+d3.csv("data/all_140_in_47.P3.csv", function(error, data){
+  raceData = data;
+/*
+  raceMap = d3.map(raceData, function(d){
+      return d.NAME;
+  });
+*/
+  raceDataClean = {};
+  for (var i = 0; i < raceData.length; i++) {
+        if (raceDataClean[raceData[i].NAME] != undefined) {
+          //console.log(raceData[i]);
+          raceDataClean[raceData[i].NAME].P003001 = raceDataClean[raceData[i].NAME].P003001+raceData[i].P003001;
+          raceDataClean[raceData[i].NAME].P003003 = raceDataClean[raceData[i].NAME].P003003+raceData[i].P003003;
+        } else {
+          raceDataClean[raceData[i].NAME] = {
+            P003003: raceData[i].P003003,
+            P003001: raceData[i].P003001,
+          }
+        }
+  }
+
+});
+
+function sumColumns(structure, columns) {
+  var total = 0;
+  for (c in columns) {
+    total = total + parseInt(structure[povertyColumns[c]]);
+  }
+  return total;
+}
+
+
+L.mapbox.accessToken = 'pk.eyJ1Ijoic29waGljd2FyZSIsImEiOiJjaXVzMGVpaWYwMGN1Mm9xeHN6cng0ajM2In0.0u5v4-euL-d3j1g8tfUk6A';
+var map = L.mapbox.map('map', 'mapbox.light')
+    //.addControl(L.mapbox.geocoderControl('mapbox.places', {
+    //  keepOpen: true,
+    //  autocomplete: true
+    //}))
+    .setView([36.2, -87], 12);
+
+
+var geocoderControl = L.mapbox.geocoderControl('mapbox.places');
+geocoderControl.addTo(map);
+
+geocoderControl.on('select', function(res) {
+
+  alert(JSON.stringify(res.results.features[0]));
+  //output.innerHTML = JSON.stringify(res.results.features[0]);
+});
+
+
+/*
+mapboxgl.accessToken = 'pk.eyJ1Ijoic29waGljd2FyZSIsImEiOiJjaXVzMGVpaWYwMGN1Mm9xeHN6cng0ajM2In0.0u5v4-euL-d3j1g8tfUk6A';
+var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/sophicware/cius1u902002c2jpgekli7x0g',
+      zoom: 9.75,
+      center: [-87,36.2]
+});
+*/
+var davidsonLayer = L.mapbox.featureLayer()
+    .loadURL('data/tn-davidson-tracts.geojson')
+        .addTo(map)
+            .on('ready', function() {
+
+function nameFn(d){
+  //return raceMap.get("Census Tract "+d.properties.NAME10);
+  return raceDataClean["Census Tract "+d.properties.NAME10];
+}
+
+function povertyFn(d){
+  //console.log(d.properties.NAME10);
+  //console.log("Census Tract "+d.properties.NAME10+", Davidson County, Tennessee");
+  return povertyDataClean["Census Tract "+d.properties.NAME10+", Davidson County, Tennessee"];
+}
+
+function povertyLevel(d){ 
+    var p = povertyFn(d);
+    var n = nameFn(d);
+    if (p != undefined) {
+      var percent = n ? n.P003003/n.P003001 : 0;
+      
+      if (percent > 0.5) {
+        var more_than_30 = (sumColumns(p, povertyColumns))/
+          (parseInt(p["Mortgage Total"])+parseInt(p["Rent Total"]));
+        //console.log(more_than_30);
+        return more_than_30;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+}
+
+
+
+var davidsonGeoJSON = davidsonLayer.getGeoJSON(),
+  byTract = {};
+
+var features = davidsonGeoJSON.features;
+
+for (var i = 0; i < features.length; i++) {
+  var pL = povertyLevel(features[i]);
+
+  if (pL > 0) {
+    byTract["Census Tract "+features[i].properties.NAME10+", Davidson County, Tennessee"] = [features[i]];
+
+    if (pL != Infinity) {
+      byTract["Census Tract "+features[i].properties.NAME10+", Davidson County, Tennessee"].push(pL);
+    } else {
+      byTract["Census Tract "+features[i].properties.NAME10+", Davidson County, Tennessee"].push(0);
+    }
+  var rL = nameFn(features[i]);
+  var percentage_blacks = n ? n.P003003/n.P003001 : 0;
+  byTract["Census Tract "+features[i].properties.NAME10+", Davidson County, Tennessee"].push(percentage_blacks);
+  }
+}
+
+
+
+
+var newFeatures = [];
+for (i in byTract) {
+  newFeatures.push(byTract[i][0]);
+  var n = variables[0];
+  ranges[n].min = Math.min(byTract[i][1], ranges[n].min);
+  ranges[n].max = Math.max(byTract[i][1], ranges[n].max);
+}
+//console.log(newFeatures);
+davidsonLayer.setGeoJSON(newFeatures);
+
+davidsonLayer.on('mouseover', function(e) {
+  e.layer.openPopup();
+  header = "Census Tract "+e.layer.feature.properties.NAME10+", Davidson County, Tennessee";
+  var result = byTract[header][1] < 1.0 ? byTract[header][1] : 0;
+  if (result > 0) {
+    console.log(e.layer.feature.properties.NAME10+": "+byTract[header][1]);
+  }
+});
+davidsonLayer.on('mouseout', function(e) {
+      e.layer.closePopup();
+      });
+
+
+setVariable(variables[0]);
+setRace(variables[0]);
+
+function fillFn(p){
+  return color(p);
+}
+
+
+function setRace(name) {
+  var scale = ranges[name];
+  davidsonLayer.eachLayer(function(layer) {
+    var percent = n ? n.P003003/n.P003001 : 0;
+    //console.log("Census Tract "+layer.feature.properties.NAME10+", Davidson County, Tennessee");
+    header = "Census Tract "+layer.feature.properties.NAME10+", Davidson County, Tennessee";
+    //console.log(byTract[header][1]);
+    var division = Math.floor(
+        (hues.length - 1) *
+        ((byTract[header][2] - scale.min) /
+         (scale.max - scale.min)));
+    //console.log(layer);
+
+    var result = byTract[header][2] < 1.0 ? byTract[header][2] : 0;
+
+    if (result > 0) {
+      layer.setStyle({
+        fillColor: '#000000',
+        fillOpacity: 1.0,
+        weight: 0.5
+      });
+    } else {
+      layer.setStyle({
+        fillColor: '#ffffff',
+        fillOpacity: 0.0,
+        weight: 0.0
+      });
+
+    }
+  });
+}
+
+
+function setVariable(name) {
+  var scale = ranges[name];
+  //console.log(scale);
+  davidsonLayer.eachLayer(function(layer) {
+    //console.log("Census Tract "+layer.feature.properties.NAME10+", Davidson County, Tennessee");
+    header = "Census Tract "+layer.feature.properties.NAME10+", Davidson County, Tennessee";
+    //console.log(byTract[header][1]);
+    var division = Math.floor(
+        (hues.length - 1) *
+        ((byTract[header][1] - scale.min) /
+         (scale.max - scale.min)));
+    //console.log(layer);
+
+    var result = byTract[header][1] < 1.0 ? byTract[header][1] : 0;
+
+    if (result > 0) {
+      layer.setStyle({
+        fillColor: color(result),
+        fillOpacity: 0.8,
+        weight: 0.5
+      });
+    } else {
+      layer.setStyle({
+        fillColor: '#ffffff',
+        fillOpacity: 0.0,
+        weight: 0.0
+      });
+
+    }
+  });
+}
+
+});
+
+
+</script>
+
+
+
+<!--script>
+  var width = 600,
+      height = 600,
+          centered;
+
+var color = d3.scale.linear()
+  .domain([0.0, 1.0])
+    .clamp(true)
+      .range(['#fff', '#409A99']);
+
+var projection = d3.geo.mercator()
+  .scale(1)
+  .translate([0, 0]);
+
+
+var path = d3.geo.path()
+  .projection(projection);
+
+  // Set svg width & height
+  var svg = d3.selectAll('.this')
+  .attr('preserveAspectRatio','xMinYMin')
+  .attr('height', '100%')
+  .attr('width', '100%')
+  .attr('viewBox','0 0 '+width+' '+ height);
+
+var g = svg.append('g');
+
+var mapLayer = g.append('g')
+  .classed('map-layer', true);
+
+var raceData,
+  povertyData,
+  raceMap,
+  povertyMap;
+
+d3.csv("all_140_in_47.P3.csv", function(error, data){
+  raceData = data;
+});
+
+d3.csv("ACS_10_5YR_DP04_simplied_poverty_clean.csv", function(error, data){
+  povertyData = data;
+});
+
+
+d3.json('tn-davidson-tracts.geojson', function(error, mapData) {
+  var features = mapData.features;
+
+  raceMap = d3.map(raceData, function(d){
+    return d.NAME;
+  });
+
+  povertyMap = d3.map(povertyData, function(d){
+    if (d.Calculation == "Estimate") {
+      return d.Tract;
+    }
+  });
+
+  var b = path.bounds( mapData ),
+  s = .95 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height),
+  t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
+
+  // Update the projection    
+  projection
+  .scale(s)
+  .translate(t);
+
+  mapLayer.selectAll('path')
+    .data(features)
+    .enter().append('path')
+    .attr('d', path)
+    .style('fill', fillFn)
+    .on('mouseover', showLog);
+});
+
+function nameFn(d){
+  return raceMap.get("Census Tract "+d.properties.NAME10);
+}
+
+function povertyFn(d){
+  return povertyMap.get("Census Tract "+d.properties.NAME10+", Davidson County, Tennessee");
+}
+
+function showLog(d) {
+  //var n = nameFn(d);
+  var p = povertyFn(d);
+  //console.log("Census Tract "+d.properties.NAME10+", David");
+  if (p != undefined) {
+    console.log(1-(p["Less than 20.0 percent"]/p.Total));
+    return 1-(p["Less than 20.0 percent"]/p.Total);
+  } else {
+    return 0;
+  }
+  //alert(((n.P003003/n.P003001)*100) + "%");
+}
+
+
+function nameLength(d){
+    var n = nameFn(d);
+    return n ? n.P003003/n.P003001 : 0;
+}
+
+function povertyLevel(d){
+    var p = povertyFn(d);
+    var n = nameFn(d);
+    if (p != undefined) {
+      var percent = n ? n.P003003/n.P003001 : 0;
+      if (percent > 0.2) {
+        console.log(p["25.0 to 29.9 percent"]/p.Total);
+        return p["25.0 to 29.9 percent"]/p.Total;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+    //return n ? n.P003003/n.P003001 : 0;
+}
+
+function fillFn(d){
+  return color(povertyLevel(d));
+}
+
+</script-->
+</body>
+</html>
