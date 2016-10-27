@@ -98,7 +98,7 @@ d3.csv("data/GeocodeResults.csv", function(error, data){
   };
 
   for (var i = 0; i < markerData.length; i++) {
-    console.log(markerData[i]);
+    //console.log(markerData[i]);
     if (markerData[i]["LL"] != undefined) {
     markerGeoJSON["features"].push(
     {
@@ -209,7 +209,7 @@ var map = new mapboxgl.Map({
 });
 */
 var davidsonLayer = L.mapbox.featureLayer()
-    .loadURL('tn-davidson-tracts.geojson')
+    .loadURL('data/tn-davidson-tracts.geojson')
         .addTo(map)
             .on('ready', function() {
 
