@@ -109,7 +109,7 @@ d3.csv("data/GeocodeResults.csv", function(error, data){
       },
       properties: {
         title: markerData[i]["Name"],
-        description: '1718 14th St NW, Washington, DC',
+        description: markerData[i]["Found"],
         'marker-size': 'medium',
         'marker-color': '#BE9A6B',
         'marker-symbol': 'circle'
